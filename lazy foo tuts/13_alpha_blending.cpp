@@ -1,4 +1,5 @@
 
+
 #include <iostream>
 #include <stdio.h>
 // #include "/opt/homebrew/opt/sdl2_image/include/SDL2/SDL_image.h"
@@ -11,11 +12,11 @@
 
 SDL_Window *gWindow = NULL;
 SDL_Surface *gScreenSurface = NULL;
-SDL_Surface *gImgBackground = NULL;
+SDL_Surface *gImgColors = NULL;
 SDL_Surface *gImgPlayer = NULL;
 SDL_Surface *optimizedSurface = NULL; // the gImage could be of any format like 24-bit, 1-bit, etc. we need to convert it to the format of the window's screen :)
 // SDL_Rect *dest_rect = new SDL_Rect;
-SDL_Texture *gTextureBack = NULL, *gTexturePlayer = NULL;
+SDL_Texture *gTextureColors = NULL, *gTexturePlayer = NULL;
 SDL_Renderer *gRenderer = NULL;
 
 const int SCREEN_WIDTH = 640;
@@ -77,25 +78,25 @@ bool init()
 
 bool loadMedia(KEY_PRESS val)
 {
-    gImgBackground = IMG_Load("media/background.png");
+    gImgColors = IMG_Load("media/colors.png");
     gImgPlayer = IMG_Load("media/foo.png");
-    if (gImgBackground == NULL || gImgPlayer == NULL)
+    if (gImgColors == NULL || gImgPlayer == NULL)
     {
         printf(":( error = %s\n", SDL_GetError());
         return false;
     }
 
-    SDL_SetColorKey(gImgPlayer, SDL_TRUE, SDL_MapRGB(gImgPlayer->format, 0x00, 0xff, 0xff));
+    SDL_SetColorKey(gImgColors, SDL_TRUE, SDL_MapRGB(gImgColors->format, 0x00, 0xff, 0xff));
 
-    gTextureBack = SDL_CreateTextureFromSurface(gRenderer, gImgBackground);
+    gTextureColors = SDL_CreateTextureFromSurface(gRenderer, gImgColors);
     gTexturePlayer = SDL_CreateTextureFromSurface(gRenderer, gImgPlayer);
 
-    SDL_FreeSurface(gImgBackground);
-    gImgBackground = NULL;
+    SDL_FreeSurface(gImgColors);
+    gImgColors = NULL;
     SDL_FreeSurface(gImgPlayer);
     gImgPlayer = NULL;
 
-    if (gTextureBack == NULL || gTexturePlayer == NULL)
+    if (gTextureColors == NULL || gTexturePlayer == NULL)
     {
         printf(":( error = %s\n", SDL_GetError());
         return false;
@@ -116,8 +117,8 @@ void close()
 
     // delete (dest_rect);
 
-    SDL_DestroyTexture(gTextureBack);
-    gTextureBack = NULL;
+    SDL_DestroyTexture(gTextureColors);
+    gTextureColors = NULL;
     SDL_DestroyRenderer(gRenderer);
     gRenderer = NULL;
 
@@ -130,6 +131,8 @@ void runGameLoop()
     bool quitGameLoop = false;
     SDL_Event e;
 
+    uint8_t r = 255, g = 255, b = 255;
+
     while (!quitGameLoop)
     {
         while (SDL_PollEvent(&e) == 1)
@@ -138,17 +141,47 @@ void runGameLoop()
             {
                 quitGameLoop = true;
             }
+            else
+            {
+                int32_t pressedKey = e.key.keysym.sym;
+                if (pressedKey == SDLK_q)
+                {
+                    if (r + 25 <= 255)
+                        r += 25;
+                }
+                else if (pressedKey == SDLK_w)
+                {
+                    if (g + 25 <= 255)
+                        g += 25;
+                }
+                else if (pressedKey == SDLK_e)
+                {
+                    if (b + 25 <= 255)
+                        b += 25;
+                }
+                else if (pressedKey == SDLK_a)
+                {
+                    if (r - 25 >= 0)
+                        r -= 25;
+                }
+                else if (pressedKey == SDLK_s)
+                {
+                    if (g - 25 >= 0)
+                        g -= 25;
+                }
+                else if (pressedKey == SDLK_d)
+                {
+                    if (b - 25 >= 0)
+                        b -= 25;
+                }
+            }
         }
         // clear screen
         SDL_RenderClear(gRenderer);
 
-        SDL_RenderCopy(gRenderer, gTextureBack, NULL, NULL);
+        SDL_SetTextureColorMod(gTextureColors, r, g, b);
 
-        int gImgPlayer_width, gImgPlayer_height;
-        SDL_QueryTexture(gTexturePlayer, NULL, NULL, &gImgPlayer_width, &gImgPlayer_height);
-
-        SDL_Rect rect_player = {350, 160, gImgPlayer_width, gImgPlayer_height};
-        SDL_RenderCopy(gRenderer, gTexturePlayer, NULL, &rect_player);
+        SDL_RenderCopy(gRenderer, gTextureColors, NULL, NULL);
 
         // update screen
         SDL_RenderPresent(gRenderer);

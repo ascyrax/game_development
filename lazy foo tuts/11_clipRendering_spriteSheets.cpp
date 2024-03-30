@@ -11,11 +11,11 @@
 
 SDL_Window *gWindow = NULL;
 SDL_Surface *gScreenSurface = NULL;
-SDL_Surface *gImgBackground = NULL;
+SDL_Surface *gImgDots = NULL;
 SDL_Surface *gImgPlayer = NULL;
 SDL_Surface *optimizedSurface = NULL; // the gImage could be of any format like 24-bit, 1-bit, etc. we need to convert it to the format of the window's screen :)
 // SDL_Rect *dest_rect = new SDL_Rect;
-SDL_Texture *gTextureBack = NULL, *gTexturePlayer = NULL;
+SDL_Texture *gTextureDots = NULL, *gTexturePlayer = NULL;
 SDL_Renderer *gRenderer = NULL;
 
 const int SCREEN_WIDTH = 640;
@@ -77,25 +77,25 @@ bool init()
 
 bool loadMedia(KEY_PRESS val)
 {
-    gImgBackground = IMG_Load("media/background.png");
+    gImgDots = IMG_Load("media/dots.png");
     gImgPlayer = IMG_Load("media/foo.png");
-    if (gImgBackground == NULL || gImgPlayer == NULL)
+    if (gImgDots == NULL || gImgPlayer == NULL)
     {
         printf(":( error = %s\n", SDL_GetError());
         return false;
     }
 
-    SDL_SetColorKey(gImgPlayer, SDL_TRUE, SDL_MapRGB(gImgPlayer->format, 0x00, 0xff, 0xff));
+    SDL_SetColorKey(gImgDots, SDL_TRUE, SDL_MapRGB(gImgDots->format, 0x00, 0xff, 0xff));
 
-    gTextureBack = SDL_CreateTextureFromSurface(gRenderer, gImgBackground);
+    gTextureDots = SDL_CreateTextureFromSurface(gRenderer, gImgDots);
     gTexturePlayer = SDL_CreateTextureFromSurface(gRenderer, gImgPlayer);
 
-    SDL_FreeSurface(gImgBackground);
-    gImgBackground = NULL;
+    SDL_FreeSurface(gImgDots);
+    gImgDots = NULL;
     SDL_FreeSurface(gImgPlayer);
     gImgPlayer = NULL;
 
-    if (gTextureBack == NULL || gTexturePlayer == NULL)
+    if (gTextureDots == NULL || gTexturePlayer == NULL)
     {
         printf(":( error = %s\n", SDL_GetError());
         return false;
@@ -116,8 +116,8 @@ void close()
 
     // delete (dest_rect);
 
-    SDL_DestroyTexture(gTextureBack);
-    gTextureBack = NULL;
+    SDL_DestroyTexture(gTextureDots);
+    gTextureDots = NULL;
     SDL_DestroyRenderer(gRenderer);
     gRenderer = NULL;
 
@@ -142,7 +142,24 @@ void runGameLoop()
         // clear screen
         SDL_RenderClear(gRenderer);
 
-        SDL_RenderCopy(gRenderer, gTextureBack, NULL, NULL);
+        int imgDotsWidth, imgDotsHeight;
+        SDL_QueryTexture(gTextureDots, NULL, NULL, &imgDotsWidth, &imgDotsHeight);
+
+        SDL_Rect topLeft = {0, 0, imgDotsWidth / 2, imgDotsHeight / 2};
+        SDL_Rect dest_rect_topLeft = {0, 0, imgDotsWidth / 2, imgDotsHeight / 2};
+        SDL_RenderCopy(gRenderer, gTextureDots, &topLeft, &dest_rect_topLeft);
+
+        SDL_Rect topRight = {imgDotsWidth / 2, 0, imgDotsWidth / 2, imgDotsHeight / 2};
+        SDL_Rect dest_rect_topRight = {SCREEN_WIDTH - imgDotsWidth / 2, 0, imgDotsWidth / 2, imgDotsHeight / 2};
+        SDL_RenderCopy(gRenderer, gTextureDots, &topRight, &dest_rect_topRight);
+
+        SDL_Rect bottomLeft = {0, imgDotsHeight / 2, imgDotsWidth / 2, imgDotsHeight / 2};
+        SDL_Rect dest_rect_bottomLeft = {0, SCREEN_HEIGHT - imgDotsHeight / 2, imgDotsWidth / 2, imgDotsHeight / 2};
+        SDL_RenderCopy(gRenderer, gTextureDots, &bottomLeft, &dest_rect_bottomLeft);
+
+        SDL_Rect bottomRight = {imgDotsWidth / 2, imgDotsHeight / 2, imgDotsWidth / 2, imgDotsHeight / 2};
+        SDL_Rect dest_rect_bottomRight = {SCREEN_WIDTH - imgDotsWidth / 2, SCREEN_HEIGHT - imgDotsHeight / 2, imgDotsWidth / 2, imgDotsHeight / 2};
+        SDL_RenderCopy(gRenderer, gTextureDots, &bottomRight, &dest_rect_bottomRight);
 
         int gImgPlayer_width, gImgPlayer_height;
         SDL_QueryTexture(gTexturePlayer, NULL, NULL, &gImgPlayer_width, &gImgPlayer_height);
