@@ -1,1 +1,20 @@
-g++ -std=c++17 16_true_type_fonts.cpp `sdl2-config --cflags --libs` -I/opt/homebrew/include/SDL2/SDL_image.h -L/opt/homebrew/lib/ -lSDL2_image   && ./a.out
+g++ -std=c++17 16_true_type_fonts.cpp `sdl2-config --cflags --libs` 
+-I/opt/homebrew/include/SDL2/SDL_image.h  -L/opt/homebrew/lib/ -lSDL2_image   
+&& 
+./a.out
+
+
+g++ -std=c++17 16_true_type_fonts.cpp `sdl2-config --cflags --libs` 
+-I/opt/homebrew/include/SDL2/SDL_image.h -L/opt/homebrew/lib/ -lSDL2_image 
+-I/opt/homebrew/include/SDL2/SDL_ttf.h -L/opt/homebrew/lib/ -lSDL2_ttf  
+&& 
+./a.out
+
+
+
+g++ -std=c++17 21_soundEffectAndMusic.cpp `sdl2-config --cflags --libs` 
+-I/opt/homebrew/include/SDL2/SDL_image.h -L/opt/homebrew/lib/ -lSDL2_image 
+-I/opt/homebrew/include/SDL2/SDL_ttf.h -L/opt/homebrew/lib/ -lSDL2_ttf 
+-I/opt/homebrew/include/SDL2/SDL_mixer.h -L/opt/homebrew/lib/ -lSDL2_mixer  
+&& 
+./a.out
