@@ -12,27 +12,19 @@
 
 SDL_Window *gWindow = NULL;
 SDL_Surface *gScreenSurface = NULL;
-SDL_Surface *gImgColors = NULL;
-SDL_Surface *gImgPlayer = NULL;
+SDL_Surface *surfFrames = NULL;
 SDL_Surface *optimizedSurface = NULL; // the gImage could be of any format like 24-bit, 1-bit, etc. we need to convert it to the format of the window's screen :)
 // SDL_Rect *dest_rect = new SDL_Rect;
-SDL_Texture *gTextureColors = NULL, *gTexturePlayer = NULL;
+SDL_Texture *textureFrames = NULL;
 SDL_Renderer *gRenderer = NULL;
+int frameNo = 0;
+
+SDL_Rect *frameRects[4];
 
 const int SCREEN_WIDTH = 640;
 // const int SCREEN_WIDTH = 1280;
 // const int SCREEN_HEIGHT = 720;
 const int SCREEN_HEIGHT = 480;
-
-enum KEY_PRESS
-{
-    KEY_PRESS_DEFAULT,
-    KEY_PRESS_UP,
-    KEY_PRESS_DOWN,
-    KEY_PRESS_LEFT,
-    KEY_PRESS_RIGHT,
-    // KEY_PRESS_COUNT
-};
 
 bool init()
 {
@@ -76,27 +68,25 @@ bool init()
     return true;
 }
 
-bool loadMedia(KEY_PRESS val)
+bool loadMedia()
 {
-    gImgColors = IMG_Load("media/colors.png");
-    gImgPlayer = IMG_Load("media/foo.png");
-    if (gImgColors == NULL || gImgPlayer == NULL)
+
+    surfFrames = IMG_Load("media/foo.png");
+    if (surfFrames == NULL)
     {
         printf(":( error = %s\n", SDL_GetError());
         return false;
     }
 
-    SDL_SetColorKey(gImgColors, SDL_TRUE, SDL_MapRGB(gImgColors->format, 0x00, 0xff, 0xff));
+    // color keying to remove colored background from sprites
+    // SDL_SetColorKey(surfFrames, SDL_TRUE, SDL_MapRGB(surfFrames->format, 0x00, 0xff, 0xff));
 
-    gTextureColors = SDL_CreateTextureFromSurface(gRenderer, gImgColors);
-    gTexturePlayer = SDL_CreateTextureFromSurface(gRenderer, gImgPlayer);
+    textureFrames = SDL_CreateTextureFromSurface(gRenderer, surfFrames);
 
-    SDL_FreeSurface(gImgColors);
-    gImgColors = NULL;
-    SDL_FreeSurface(gImgPlayer);
-    gImgPlayer = NULL;
+    SDL_FreeSurface(surfFrames);
+    surfFrames = NULL;
 
-    if (gTextureColors == NULL || gTexturePlayer == NULL)
+    if (textureFrames == NULL)
     {
         printf(":( error = %s\n", SDL_GetError());
         return false;
@@ -105,25 +95,30 @@ bool loadMedia(KEY_PRESS val)
     return true;
 }
 
-void close()
+bool generateFrameRects()
 {
-    SDL_DestroyWindow(gWindow);
-    gWindow = NULL;
+    int textureW, textureH;
+    if (SDL_QueryTexture(textureFrames, NULL, NULL, &textureW, &textureH) < 0)
+    {
+        printf(":( error getting the texture width or height. error = %s\n", SDL_GetError());
+        return false;
+    }
 
-    SDL_FreeSurface(gScreenSurface);
-    gScreenSurface = NULL;
-    SDL_FreeSurface(optimizedSurface);
-    optimizedSurface = NULL;
+    int frameW = textureW / 4;
+    int frameH = textureH;
 
-    // delete (dest_rect);
+    for (int i = 0; i < 4; i++)
+    {
+        int x = i * frameW;
+        int y = 0;
+        int w = frameW;
+        int h = frameH;
 
-    SDL_DestroyTexture(gTextureColors);
-    gTextureColors = NULL;
-    SDL_DestroyRenderer(gRenderer);
-    gRenderer = NULL;
+        frameRects[i] = new SDL_Rect{x, y, w, h};
+    }
 
-    IMG_Quit();
-    SDL_Quit();
+    // printf("%d %d\n", textureW, textureH);
+    return true;
 }
 
 void runGameLoop()
@@ -141,51 +136,47 @@ void runGameLoop()
             {
                 quitGameLoop = true;
             }
-            else
-            {
-                int32_t pressedKey = e.key.keysym.sym;
-                if (pressedKey == SDLK_q)
-                {
-                    if (r + 25 <= 255)
-                        r += 25;
-                }
-                else if (pressedKey == SDLK_w)
-                {
-                    if (g + 25 <= 255)
-                        g += 25;
-                }
-                else if (pressedKey == SDLK_e)
-                {
-                    if (b + 25 <= 255)
-                        b += 25;
-                }
-                else if (pressedKey == SDLK_a)
-                {
-                    if (r - 25 >= 0)
-                        r -= 25;
-                }
-                else if (pressedKey == SDLK_s)
-                {
-                    if (g - 25 >= 0)
-                        g -= 25;
-                }
-                else if (pressedKey == SDLK_d)
-                {
-                    if (b - 25 >= 0)
-                        b -= 25;
-                }
-            }
         }
         // clear screen
         SDL_RenderClear(gRenderer);
 
-        SDL_SetTextureColorMod(gTextureColors, r, g, b);
-
-        SDL_RenderCopy(gRenderer, gTextureColors, NULL, NULL);
-
+        // SDL_RenderCopy(gRenderer, textureFrames, NULL, NULL);
+        int frameSpeed = 150;
+        // SDL_RenderCopy(gRenderer, textureFrames, frameRects[frameNo / frameSpeed], NULL);
+        SDL_RenderCopyEx(gRenderer, textureFrames, frameRects[frameNo / frameSpeed], NULL, 0, NULL, SDL_FLIP_VERTICAL);
+        frameNo++;
+        if (frameNo / frameSpeed == 4)
+            frameNo = 0;
         // update screen
         SDL_RenderPresent(gRenderer);
     }
+}
+
+void close()
+{
+    SDL_DestroyWindow(gWindow);
+    gWindow = NULL;
+
+    SDL_FreeSurface(gScreenSurface);
+    gScreenSurface = NULL;
+    SDL_FreeSurface(optimizedSurface);
+    optimizedSurface = NULL;
+
+    // delete (dest_rect);
+
+    SDL_DestroyTexture(textureFrames);
+    textureFrames = NULL;
+    SDL_DestroyRenderer(gRenderer);
+    gRenderer = NULL;
+
+    for (int i = 0; i < 4; i++)
+    {
+        delete frameRects[i];
+        frameRects[i] = NULL;
+    }
+
+    IMG_Quit();
+    SDL_Quit();
 }
 
 int main()
@@ -196,12 +187,14 @@ int main()
     }
     else
     {
-        if (!loadMedia(KEY_PRESS_DEFAULT))
+        if (!loadMedia())
         {
             printf(":( failed to load image = %s\n", SDL_GetError());
         }
         else
         {
+            printf(":) generating SDL_rects to render the textureFrame's different parts generating an animation: \n");
+            generateFrameRects();
             printf(":) started gameLoop \n");
             runGameLoop();
         }
