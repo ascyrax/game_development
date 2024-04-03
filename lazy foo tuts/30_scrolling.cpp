@@ -17,14 +17,16 @@ SDL_Texture *textureFont = NULL;
 SDL_Renderer *gRenderer = NULL;
 int frameNo = 0;
 
+TTF_Font *font = NULL;
+
 SDL_Rect srcRects[4];
 SDL_Rect destRects[4];
 int mouseEvents[4] = {0, 0, 0, 0};
 
-// const int SCREEN_WIDTH = 640;
-const int SCREEN_WIDTH = 1280;
-const int SCREEN_HEIGHT = 720;
-// const int SCREEN_HEIGHT = 480;
+const int LEVEL_WIDTH = 1280;
+const int LEVEL_HEIGHT = 960;
+const int SCREEN_WIDTH = 640;
+const int SCREEN_HEIGHT = 480;
 
 Mix_Music *music = NULL;
 Mix_Chunk *scratch = NULL;
@@ -34,6 +36,12 @@ Mix_Chunk *low = NULL;
 Mix_Chunk *medium = NULL;
 
 uint64_t startTime = SDL_GetTicks64();
+int nFrames = 0;
+
+SDL_Surface *surfDot = NULL;
+SDL_Surface *surfBg = NULL;
+SDL_Texture *textBg = NULL;
+SDL_Texture *textDot = NULL;
 
 bool init()
 {
@@ -87,11 +95,48 @@ bool init()
     return true;
 }
 
+int dotX = SCREEN_WIDTH / 2, dotY = SCREEN_HEIGHT / 2, dotW, dotH;
+
+void updateTexture()
+{
+    textBg = SDL_CreateTextureFromSurface(gRenderer, surfBg);
+    textDot = SDL_CreateTextureFromSurface(gRenderer, surfDot);
+
+    // TTF_CloseFont(text)
+
+    SDL_QueryTexture(textDot, NULL, NULL, &dotW, &dotH);
+    int MUL = 2;
+    dotW *= MUL;
+    dotH *= MUL;
+
+    // free surface
+    SDL_FreeSurface(surfBg);
+    surfBg = NULL;
+    SDL_FreeSurface(surfDot);
+    surfDot = NULL;
+}
+
 bool loadMedia()
 {
+    surfDot = IMG_Load("media/dot.bmp");
+    if (surfDot == NULL)
+    {
+        printf(":( could not load the dot.bmp file. error = %s\n", IMG_GetError());
+        return false;
+    }
+
+    SDL_SetColorKey(surfDot, SDL_TRUE, SDL_MapRGB(surfDot->format, 0x00, 0xff, 0xff));
+
+    surfBg = IMG_Load("media/background01.webp");
+    if (surfBg == NULL)
+    {
+        printf(":( could not load the background image file. error = %s\n", IMG_GetError());
+        return false;
+    }
 
     // color keying to remove colored background from sprites
     // SDL_SetColorKey(surfPrompt, SDL_TRUE, SDL_MapRGB(surfPrompt->format, 0x00, 0xff, 0xff));
+    updateTexture();
 
     return true;
 }
@@ -105,31 +150,65 @@ void runGameLoop()
 
     while (!quitGameLoop)
     {
+        nFrames++;
         while (SDL_PollEvent(&e) == 1)
         {
             if (e.type == SDL_QUIT)
             {
                 quitGameLoop = true;
             }
-            else if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_RETURN)
+            else if (e.type == SDL_KEYDOWN)
             {
-                startTime = SDL_GetTicks64();
+                int MUL = 30;
+                switch (e.key.keysym.sym)
+                {
+                case SDLK_UP:
+                    dotY -= MUL;
+                    if (dotY < 0)
+                        dotY = 0;
+                    break;
+                case SDLK_DOWN:
+                    dotY += MUL;
+                    if (dotY + dotH > SCREEN_HEIGHT)
+                        dotY = SCREEN_HEIGHT - dotH;
+                    break;
+                case SDLK_LEFT:
+                    dotX -= MUL;
+                    if (dotX < 0)
+                        dotX = 0;
+                    break;
+                case SDLK_RIGHT:
+                    dotX += MUL;
+                    if (dotX + dotW > SCREEN_WIDTH)
+                        dotX = SCREEN_WIDTH - dotW;
+                    break;
+                default:
+                    break;
+                }
             }
         }
 
-        SDL_SetRenderDrawColor(gRenderer, 0x0f, 0x0f, 0x0f, 0xff);
+        SDL_SetRenderDrawColor(gRenderer, 0x0f, 0xff, 0xff, 0xff);
         SDL_RenderClear(gRenderer);
 
-        std::string runningTime = "time: " + std::to_string(SDL_GetTicks64() - startTime);
-        TTF_Font *font = TTF_OpenFont("old/media/lazy.ttf", 14);
-        SDL_Color color = {255, 255, 255, 255};
-        SDL_Surface *surfText = TTF_RenderText_Solid(font, runningTime.c_str(), color);
+        int textureWid, textureHei;
+        SDL_QueryTexture(textBg, NULL, NULL, &textureWid, &textureHei);
 
-        textureFont = SDL_CreateTextureFromSurface(gRenderer, surfText);
+        SDL_Rect srcRect = {dotX - SCREEN_WIDTH / 2, dotY - SCREEN_HEIGHT / 2, SCREEN_WIDTH, SCREEN_HEIGHT};
+        if (srcRect.x < 0)
+            srcRect.x = 0;
+        if (srcRect.x + SCREEN_WIDTH > LEVEL_WIDTH)
+            srcRect.x = LEVEL_WIDTH - SCREEN_WIDTH;
 
-        SDL_Rect destRect = {100, 100, 800, 400};
+        if (srcRect.y < 0)
+            srcRect.y = 0;
+        if (srcRect.y + SCREEN_HEIGHT > LEVEL_HEIGHT)
+            srcRect.y = LEVEL_HEIGHT - SCREEN_HEIGHT;
 
-        SDL_RenderCopy(gRenderer, textureFont, NULL, NULL);
+        SDL_RenderCopy(gRenderer, textBg, &srcRect, NULL);
+
+        SDL_Rect destRect = {dotX, dotY, dotW, dotH};
+        SDL_RenderCopy(gRenderer, textDot, NULL, &destRect);
 
         // update screen
         SDL_RenderPresent(gRenderer);
@@ -150,6 +229,9 @@ void close()
     textureFont = NULL;
     SDL_DestroyRenderer(gRenderer);
     gRenderer = NULL;
+
+    TTF_CloseFont(font);
+    font = NULL;
 
     IMG_Quit();
     SDL_Quit();
